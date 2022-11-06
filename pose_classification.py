@@ -126,8 +126,9 @@ class PoseClassifier(object):
         Returns:
           Dictionary with count of nearest pose samples from the database. Sample:
             {
-              'pushups_down': 8,
-              'pushups_up': 2,
+              'plank': 8,
+              'warrior': 2,
+              ...
             }
         """
         # Check that provided and target poses have the same shape.
