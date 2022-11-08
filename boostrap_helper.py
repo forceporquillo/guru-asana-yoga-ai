@@ -43,7 +43,8 @@ class BootstrapHelper(object):
         # Initialize fresh pose tracker and run it.
         with mp_pose.Pose(
                 static_image_mode=True,
-                model_complexity=1
+                model_complexity=1,
+                min_detection_confidence=0.7
         ) as pose_tracker:
             result = pose_tracker.process(image=input_frame)
             pose_landmarks = result.pose_landmarks
