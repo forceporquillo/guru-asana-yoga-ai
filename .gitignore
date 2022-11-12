@@ -130,3 +130,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+guru_asana_data_sets_in/
+guru_asana_data_sets_out/
+guru_asana_pose_output_csv/
+pose_landmark_3d_image/
+pose_landmark_3d_plot/
+trained_poses_data_sets/
