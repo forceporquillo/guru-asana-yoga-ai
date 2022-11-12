@@ -37,7 +37,6 @@ def train_in_parallel():
 def train_data(level):
     csv_out_folder = os.path.join(csv_output_data_set, level)
     dataset_folder = os.path.join(input_data_set, level)
-
     # Create directory for outputs
     for directory in [csv_output_data_set, output_data_set]:
         if not os.path.exists(directory):

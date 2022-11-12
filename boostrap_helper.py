@@ -3,12 +3,18 @@ import os
 import sys
 
 import cv2
+import mediapipe as mp
 import numpy as np
 import tqdm
 from PIL import Image, ImageDraw
 from matplotlib import pyplot as plt
 from mediapipe.python.solutions import drawing_utils as mp_drawing
 from mediapipe.python.solutions import pose as mp_pose
+from mediapipe.python.solutions.drawing_utils import DrawingSpec
+
+from matplot_util import show_image, draw_plot_landmarks_save
+
+mp_drawing_styles = mp.solutions.drawing_styles
 
 
 class BootstrapHelper(object):
@@ -23,6 +29,9 @@ class BootstrapHelper(object):
         self._images_out_folder = None
         self._csv_out_writer = None
 
+        self._pose_landmarks_3d_dir = os.path.join('pose_landmark_3d_image', difficulty_level)
+
+        self._difficulty_level = difficulty_level
         self._data_set_folder = data_set_folder
         self._per_level_out_folder = per_level_out_folder
         self._csvs_out_folder = csvs_out_folder
@@ -35,27 +44,25 @@ class BootstrapHelper(object):
         self._pose_class_names = sorted(
             [data for data in os.listdir(self._data_set_folder) if not data.startswith('.')])
 
-    def bootstrap_in_parallel(self, image_name):
+    def _bootstrap_internal(self, image_name, pose_class_name):
         # Load image.
         input_frame = cv2.imread(os.path.join(self._images_in_folder, image_name))
-        input_frame = cv2.cvtColor(input_frame, cv2.COLOR_BGR2RGB)
+
+        # Image Dimension
+        image_height, image_width, _ = input_frame.shape
 
         # Initialize fresh pose tracker and run it.
         with mp_pose.Pose(
                 static_image_mode=True,
+                enable_segmentation=True,
                 model_complexity=1,
-                min_detection_confidence=0.7
+                min_detection_confidence=0.7,
         ) as pose_tracker:
-            result = pose_tracker.process(image=input_frame)
+            result = pose_tracker.process(cv2.cvtColor(input_frame, cv2.COLOR_BGR2RGB))
             pose_landmarks = result.pose_landmarks
 
         # Save image with pose prediction (if pose was detected).
         output_frame = input_frame.copy()
-        if pose_landmarks is not None:
-            mp_drawing.draw_landmarks(
-                image=output_frame,
-                landmark_list=pose_landmarks,
-                connections=mp_pose.POSE_CONNECTIONS)
         output_frame = cv2.cvtColor(output_frame, cv2.COLOR_RGB2BGR)
         cv2.imwrite(os.path.join(self._images_out_folder, image_name), output_frame)
 
@@ -71,10 +78,38 @@ class BootstrapHelper(object):
                 pose_landmarks.shape)
             self._csv_out_writer.writerow([image_name] + pose_landmarks.flatten().astype(np.str).tolist())
 
+            annotated_image = input_frame.copy()
+            # Draw segmentation on the image.
+            # To improve segmentation around boundaries, consider applying a joint
+            # bilateral filter to "results.segmentation_mask" with "image".
+            condition = np.stack((result.segmentation_mask,) * 3, axis=-1) > 0.1
+            bg_image = np.zeros(input_frame.shape, dtype=np.uint8)
+            bg_image[:] = (192, 192, 192)
+            # annotated_image = np.where(condition, annotated_image, bg_image)
+            # Draw pose landmarks on the image.
+            mp_drawing.draw_landmarks(
+                annotated_image,
+                result.pose_landmarks,
+                mp_pose.POSE_CONNECTIONS,
+                landmark_drawing_spec=DrawingSpec(color=(255, 0, 0), thickness=4))
+            cv2.imwrite(os.path.join(self._pose_landmarks_3d_dir, pose_class_name, image_name + '.png'),
+                        annotated_image)
+            # Uncomment if you want to plot pose world landmarks.
+            draw_plot_landmarks_save(
+                self._difficulty_level,
+                pose_class_name,
+                image_name,
+                result.pose_world_landmarks,
+                mp_pose.POSE_CONNECTIONS,
+                landmark_drawing_spec=DrawingSpec(color=(255, 0, 0), thickness=5),
+                connection_drawing_spec=DrawingSpec(color=(0, 0, 0), thickness=2)
+            )
+
         # Draw XZ projection and concatenate with the image.
-        projection_xz = self._draw_xz_projection(
-            output_frame=output_frame, pose_landmarks=pose_landmarks)
-        output_frame = np.concatenate((output_frame, projection_xz), axis=1)
+        # projection_xz = self._draw_xz_projection(
+        #     output_frame=output_frame, pose_landmarks=pose_landmarks)
+        # output_frame = np.concatenate((output_frame, projection_xz), axis=1)
+        # show_image(output_frame)
 
     def bootstrap(self, per_pose_class_limit=None):
         """Bootstraps images in a given folder.
@@ -110,6 +145,11 @@ class BootstrapHelper(object):
         for pose_class_name in self._pose_class_names:
             print('Bootstrapping: ', pose_class_name, file=sys.stderr)
 
+            # Create Directory for Pose Landmarks image + 3d world plot per class name inside.
+            per_class_name_landmarks_dir = os.path.join(self._pose_landmarks_3d_dir, pose_class_name)
+            if not os.path.exists(per_class_name_landmarks_dir):
+                os.makedirs(per_class_name_landmarks_dir)
+
             # Paths for the pose class.
             images_in_folder = os.path.join(self._data_set_folder, pose_class_name)
             images_out_folder = os.path.join(self._per_level_out_folder, pose_class_name)
@@ -130,7 +170,7 @@ class BootstrapHelper(object):
 
                 # Bootstrap every image.
                 for image_name in tqdm.tqdm(image_names):
-                    self.bootstrap_in_parallel(image_name)
+                    self._bootstrap_internal(image_name, pose_class_name)
 
     def _draw_xz_projection(self, output_frame, pose_landmarks, r=0.5, color='red'):
         frame_height, frame_width = output_frame.shape[0], output_frame.shape[1]
