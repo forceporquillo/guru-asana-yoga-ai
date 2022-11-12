@@ -22,6 +22,18 @@ output_data_set = 'guru_asana_data_sets_out'
 input_data_set = 'guru_asana_data_sets_in'
 
 
+def train_normally():
+    for level in difficulty_level:
+        if not os.path.exists(input_data_set):
+            raise FileNotFoundError("File not found. Add data sets to [guru_asana_data_sets_in\\] folder")
+        train_data(level)
+
+
+def train_in_parallel():
+    workers = multiprocessing.cpu_count() * 4
+    thread_map(train_data, difficulty_level, max_workers=workers)
+
+
 def train_data(level):
     csv_out_folder = os.path.join(csv_output_data_set, level)
     dataset_folder = os.path.join(input_data_set, level)
@@ -116,19 +128,6 @@ def dump_joint_coordinates(csv_out_folder, level):
                 for row in csv_in_reader:
                     row.insert(1, class_name)
                     csv_out_writer.writerow(row)
-
-
-def train_normally():
-    for level in difficulty_level:
-        if not os.path.exists(input_data_set):
-            print("Add data sets to [guru_asana_data_sets_in\\] folder")
-            break
-        train_data(level)
-
-
-def train_in_parallel():
-    workers = multiprocessing.cpu_count() * 4
-    thread_map(train_data, difficulty_level, max_workers=workers)
 
 
 # driver
