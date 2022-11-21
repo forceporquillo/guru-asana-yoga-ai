@@ -29,7 +29,7 @@ BLUE_COLOR = (255, 0, 0)
 
 
 def draw_plot_landmarks_save(
-        difficulty_level,
+        #difficulty_level,
         pose_class_name,
         image_name,
         landmark_list: landmark_pb2.NormalizedLandmarkList,
@@ -80,7 +80,7 @@ def draw_plot_landmarks_save(
                     linewidth=connection_drawing_spec.thickness)
     # plt.show()
 
-    path = os.path.join('pose_landmark_3d_plot', difficulty_level, pose_class_name)
+    path = os.path.join('pose_landmark_3d_plot', pose_class_name)
     if not os.path.exists(path):
         os.makedirs(path)
 

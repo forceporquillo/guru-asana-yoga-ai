@@ -21,7 +21,7 @@ class BootstrapHelper(object):
     """Helps to bootstrap images and filter pose samples for classification."""
 
     def __init__(self,
-                 difficulty_level,
+                 #difficulty_level,
                  data_set_folder,
                  per_level_out_folder,
                  csvs_out_folder):
@@ -29,15 +29,16 @@ class BootstrapHelper(object):
         self._images_out_folder = None
         self._csv_out_writer = None
 
-        self._pose_landmarks_3d_dir = os.path.join('pose_landmark_3d_image', difficulty_level)
+       # self._pose_landmarks_3d_dir = os.path.join('pose_landmark_3d_image', difficulty_level)
+        self._pose_landmarks_3d_dir = 'pose_landmark_3d_image'
 
-        self._difficulty_level = difficulty_level
+        #self._difficulty_level = difficulty_level
         self._data_set_folder = data_set_folder
         self._per_level_out_folder = per_level_out_folder
         self._csvs_out_folder = csvs_out_folder
 
         print('#####################################################')
-        print('# Bootstrapping level: {}'.format(difficulty_level))
+     #   print('# Bootstrapping level: {}'.format(difficulty_level))
         print('#####################################################')
 
         # Get list of pose classes and print image statistics.
@@ -47,7 +48,6 @@ class BootstrapHelper(object):
     def _bootstrap_internal(self, image_name, pose_class_name):
         # Load image.
         input_frame = cv2.imread(os.path.join(self._images_in_folder, image_name))
-
         # Image Dimension
         image_height, image_width, _ = input_frame.shape
 
@@ -91,15 +91,15 @@ class BootstrapHelper(object):
                 annotated_image,
                 result.pose_landmarks,
                 mp_pose.POSE_CONNECTIONS,
-                landmark_drawing_spec=DrawingSpec(color=(255, 0, 0), thickness=4))
+                landmark_drawing_spec=DrawingSpec(color=(255, 0, 0), thickness=5))
             cv2.imwrite(os.path.join(self._pose_landmarks_3d_dir, pose_class_name, image_name + '.png'),
                         annotated_image)
             # Uncomment if you want to plot pose world landmarks.
             draw_plot_landmarks_save(
-                self._difficulty_level,
+                #self._difficulty_level,
                 pose_class_name,
                 image_name,
-                result.pose_world_landmarks,
+                result.pose_landmarks,
                 mp_pose.POSE_CONNECTIONS,
                 landmark_drawing_spec=DrawingSpec(color=(255, 0, 0), thickness=5),
                 connection_drawing_spec=DrawingSpec(color=(0, 0, 0), thickness=2)
@@ -152,6 +152,8 @@ class BootstrapHelper(object):
 
             # Paths for the pose class.
             images_in_folder = os.path.join(self._data_set_folder, pose_class_name)
+            #images_in_folder = self._data_set_folder
+            #images_out_folder = self._csvs_out_folder
             images_out_folder = os.path.join(self._per_level_out_folder, pose_class_name)
             csv_out_path = os.path.join(self._csvs_out_folder, pose_class_name + '.csv')
             if not os.path.exists(images_out_folder):
@@ -164,9 +166,13 @@ class BootstrapHelper(object):
                 if per_pose_class_limit is not None:
                     image_names = image_names[:per_pose_class_limit]
 
+                #print(image_names)
                 self._images_in_folder = images_in_folder
                 self._images_out_folder = images_out_folder
                 self._csv_out_writer = csv_out_writer
+
+                #for m in self._pose_class_names:
+                 #   image_name = os.listdir(os.path.join(self._data_set_folder, m))
 
                 # Bootstrap every image.
                 for image_name in tqdm.tqdm(image_names):
